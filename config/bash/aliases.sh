@@ -5,7 +5,7 @@ alias grep='rg'
 alias cat='bat'
 alias find='fd'
 alias du='dust'
-# alias cd='zoxide cd'
+alias cd='z'
 alias ..='cd ..'
 alias ...='cd ../..'
 
