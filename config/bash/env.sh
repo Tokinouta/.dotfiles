@@ -7,6 +7,8 @@ export PATH="$HOME/.local/bin:$PATH"
 case "$(hostname)" in
   Dayong)
     export PATH=~/android-sdk-linux/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin/:~/android-sdk-linux/platform-tools:~/android-sdk-linux/tools:~/android-sdk-linux/build-tools/33.0.0:~/installed_softwares/gdb-11-xiaomi/bin:$PATH
+    # add go binary path to $PATH.
+    export PATH=/home/dayong/go/bin/:$PATH
     ;;
 esac
 

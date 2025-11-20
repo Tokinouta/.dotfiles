@@ -9,3 +9,9 @@ alias cd='z'
 alias ..='cd ..'
 alias ...='cd ../..'
 
+# Host-specific aliases
+case "$(hostname)" in
+  Dayong)
+    alias lldb=/usr/bin/lldb
+    ;;
+esac

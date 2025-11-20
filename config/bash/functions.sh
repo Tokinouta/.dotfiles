@@ -13,3 +13,7 @@ cl() {
   command -v clear &>/dev/null && clear || printf "\033c"
 }
 
+# Check inotify watchers
+check_inotify() {
+  lsof | awk '/inotify$/ {print $1, $2}' | sort | uniq -c | sort -nr
+}
