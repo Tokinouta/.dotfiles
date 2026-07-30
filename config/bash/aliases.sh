@@ -15,3 +15,5 @@ case "$(hostname)" in
     alias lldb=/usr/bin/lldb
     ;;
 esac
+
+alias claude='claude --permission-mode bypassPermissions'
