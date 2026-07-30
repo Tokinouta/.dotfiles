@@ -23,14 +23,12 @@ export RUSTUP_UPDATE_ROOT="https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup"
 export RUSTUP_DIST_SERVER="https://mirrors.tuna.tsinghua.edu.cn/rustup"
 . "$HOME/.cargo/env"
 
-# JavaScript runtimes: bun and deno
+# JavaScript runtimes: bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
-. "$HOME/.deno/env"
 
 # Starship prompt
 eval "$(starship init bash)"
 
 # zoxide init (only if installed)
 eval "$(zoxide init bash)"
-
