@@ -3,6 +3,12 @@ export EDITOR=nvim
 export PAGER=bat
 export PATH="$HOME/.local/bin:$PATH"
 
+# Expose scripts shipped with the dotfiles (e.g. update-zen.sh) as commands.
+# Scripts here must be executable and self-contained — they are run, not sourced.
+DOTFILES_ROOT="${HOME}/.dotfiles"
+[ -d "$DOTFILES_ROOT/scripts" ] && export PATH="$DOTFILES_ROOT/scripts:$PATH"
+unset DOTFILES_ROOT
+
 # Android tools
 case "$(hostname)" in
   Dayong)
