@@ -9,7 +9,15 @@ DOTFILES_ROOT="${HOME}/.dotfiles"
 [ -d "$DOTFILES_ROOT/scripts" ] && export PATH="$DOTFILES_ROOT/scripts:$PATH"
 unset DOTFILES_ROOT
 
-# Android tools
+# Homebrew (macOS only)
+if [ "$(uname -s)" = "Darwin" ] && [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+  export HOMEBREW_BREW_GIT_REMOTE="https://mirror.nju.edu.cn/git/homebrew/brew.git"
+  export HOMEBREW_CORE_GIT_REMOTE="https://mirror.nju.edu.cn/git/homebrew/homebrew-core.git"
+  [ -d "/opt/homebrew/opt/ffmpeg-full/bin" ] && export PATH="/opt/homebrew/opt/ffmpeg-full/bin:$PATH"
+fi
+
+# Android tools (Linux work PC only)
 case "$(hostname)" in
   Dayong)
     export PATH=~/android-sdk-linux/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin/:~/android-sdk-linux/platform-tools:~/android-sdk-linux/tools:~/android-sdk-linux/build-tools/33.0.0:~/installed_softwares/gdb-11-xiaomi/bin:$PATH
@@ -21,14 +29,14 @@ esac
 # modify rustup source and source cargo env
 export RUSTUP_UPDATE_ROOT="https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup"
 export RUSTUP_DIST_SERVER="https://mirrors.tuna.tsinghua.edu.cn/rustup"
-. "$HOME/.cargo/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # JavaScript runtimes: bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
+BUN_INSTALL="$HOME/.bun"
+[ -d "$BUN_INSTALL/bin" ] && export PATH="$BUN_INSTALL/bin:$PATH"
 
 # Starship prompt (shell-aware)
-eval "$(starship init "$SHELL_TYPE")"
+command -v starship >/dev/null && eval "$(starship init "$SHELL_TYPE")"
 
 # zoxide init (shell-aware, only if installed)
-eval "$(zoxide init "$SHELL_TYPE")"
+command -v zoxide >/dev/null && eval "$(zoxide init "$SHELL_TYPE")"

@@ -2,18 +2,10 @@
 DOTFILES="${HOME}/.dotfiles/config/shell"
 
 # Detect shell type for shell-specific branching downstream
-if [ -n "$ZSH_VERSION" ]; then
-  export SHELL_TYPE="zsh"
-elif [ -n "$BASH_VERSION" ]; then
-  export SHELL_TYPE="bash"
-else
-  # Fallback: try to guess from $SHELL or $0
-  case "$(basename "${SHELL:-$0}")" in
-    zsh)  export SHELL_TYPE="zsh" ;;
-    bash) export SHELL_TYPE="bash" ;;
-    *)    export SHELL_TYPE="unknown" ;;
-  esac
-fi
+export SHELL_TYPE="$(basename "$SHELL")"
+# Safety net: version vars are more reliable than $SHELL for the running shell
+[ -n "$ZSH_VERSION" ] && SHELL_TYPE="zsh"
+[ -n "$BASH_VERSION" ] && SHELL_TYPE="bash"
 
 [ -f "$DOTFILES/config.sh" ]    && source "$DOTFILES/config.sh"
 [ -f "$DOTFILES/env.sh" ]       && source "$DOTFILES/env.sh"
