@@ -27,8 +27,8 @@ export RUSTUP_DIST_SERVER="https://mirrors.tuna.tsinghua.edu.cn/rustup"
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-# Starship prompt
-eval "$(starship init bash)"
+# Starship prompt (shell-aware)
+eval "$(starship init "$SHELL_TYPE")"
 
-# zoxide init (only if installed)
-eval "$(zoxide init bash)"
+# zoxide init (shell-aware, only if installed)
+eval "$(zoxide init "$SHELL_TYPE")"

@@ -4,18 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Personal bash dotfiles. The repo is cloned/symlinked at `~/.dotfiles` and sourced live by `~/.bashrc` — there is no build, test, or lint step. Changes take effect by opening a new shell or re-sourcing `~/.bashrc`.
+Universal shell dotfiles (bash, zsh, extensible to other shells). The repo is cloned/symlinked at `~/.dotfiles` and sourced live by `~/.bashrc` and `~/.zshrc` — there is no build, test, or lint step. Changes take effect by opening a new shell or re-sourcing the appropriate rc file.
+
+## Shell detection
+
+`config/shell/init.sh` detects the running shell at startup and exports `SHELL_TYPE` (`bash` or `zsh`). All downstream files use this variable to branch on shell-specific behavior (e.g., `shopt` for bash, `setopt` for zsh). To add support for a new shell (e.g. fish), add its detection in `init.sh` and guard shell-specific code with `if [ "$SHELL_TYPE" = "fish" ]`.
 
 ## Load order
 
-`~/.bashrc` sources `config/bash/init.sh`, which loads (in order):
-1. `config/bash/config.sh` — bash history/shopt options
-2. `config/bash/env.sh` — env vars, `PATH`, rustup mirrors, cargo, bun, starship, zoxide
-3. `config/bash/aliases.sh` — aliases (mostly modern CLI replacements)
-4. `config/bash/functions.sh` — shell functions
-5. `config/bash/extras/*.sh` — auto-globbed; each file is a self-contained tool init (`conda.sh`, `nvm.sh`)
+`~/.bashrc` or `~/.zshrc` sources `config/shell/init.sh`, which loads (in order):
+1. `config/shell/config.sh` — shell options (bash: `shopt`, zsh: `setopt`)
+2. `config/shell/env.sh` — env vars, `PATH`, rustup mirrors, cargo, bun, starship, zoxide
+3. `config/shell/aliases.sh` — aliases (mostly modern CLI replacements)
+4. `config/shell/functions.sh` — shell functions
+5. `config/shell/extras/*.sh` — auto-globbed; each file is a self-contained tool init (`conda.sh`, `nvm.sh`)
 
-To add a new tool's shell integration, drop a new `config/bash/extras/<tool>.sh` — `init.sh` picks it up automatically via glob. No edit to `init.sh` needed.
+To add a new tool's shell integration, drop a new `config/shell/extras/<tool>.sh` — `init.sh` picks it up automatically via glob. No edit to `init.sh` needed.
 
 ## Tool ecosystem
 
@@ -34,7 +38,7 @@ These tools are initialized on shell startup via the load chain above:
 
 ## Shell functions
 
-Defined in `config/bash/functions.sh`:
+Defined in `config/shell/functions.sh`:
 - `extract <archive>` — unpack `.tar.bz2`, `.tar.gz`, or `.zip`
 - `cl` — cross-platform terminal clear
 - `check_inotify` — show processes with active inotify watchers (sorted by count)
