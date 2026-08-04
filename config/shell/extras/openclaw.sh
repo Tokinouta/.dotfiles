@@ -1,0 +1,4 @@
+# OpenClaw completion (zsh only)
+if [ -f "$HOME/.openclaw/completions/openclaw.zsh" ]; then
+  source "$HOME/.openclaw/completions/openclaw.zsh"
+fi
