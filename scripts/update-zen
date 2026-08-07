@@ -227,25 +227,17 @@ check_for_updates() {
     local is_twilight="$1"
     local zsync_url
     local zsync_file
-    local appimage_url
     local file_base
 
     if [[ "$is_twilight" == 1 ]]; then
         file_base="$ZEN_TWILIGHT_NAME_BASE"
+        zsync_url="$ZEN_TWILIGHT.zsync"
     else
         file_base="$ZEN_STABLE_NAME_BASE"
+        zsync_url="$ZEN_STABLE.zsync"
     fi
 
     log_info ""
-    
-
-    if [[ "$is_twilight" == 1 ]]; then
-        zsync_url="$ZEN_TWILIGHT.zsync"
-        appimage_url="$ZEN_TWILIGHT"
-    else
-        zsync_url="$ZEN_STABLE.zsync"
-        appimage_url="$ZEN_STABLE"
-    fi
 
     # Get the download directory using xdg-user-dir, using Downloads as default value
 	DOWNLOAD_DIR=$(xdg-user-dir DOWNLOAD || echo "${HOME}/Downloads")
@@ -260,16 +252,35 @@ check_for_updates() {
             return 1
         fi
         download_until_success "$zsync_url" "$zsync_file" "zsync"
-        update_output=$(zsync -i ~/.local/share/AppImage/$file_base.AppImage -o ~/.local/share/AppImage/$file_base.AppImage "$zsync_file" 2>&1)
-        if echo "$update_output" | grep -q "verifying download...checksum matches OK"; then
-            log_info "(｡♥‿♥｡) Congrats! Zen Browser is up-to-date!"
-        else
-            echo "Updating Zen Browser..."
-            download_until_success "$appimage_url" ~/.local/share/AppImage/$file_base.AppImage "update"
-            process_appimage ~/.local/share/AppImage/$file_base.AppImage $file_base
-            log_info "(｡♥‿♥｡) Zen Browser updated to the latest!"
-        fi
+        # The .zsync file is a manifest describing the latest release. We use
+        # it only to read the target SHA-1, then compare against the installed
+        # AppImage to decide whether an update is needed.
+        #
+        # We deliberately do NOT run the `zsync` binary to fetch a delta:
+        # zsync 0.6.2's HTTP client cannot follow GitHub's release redirect
+        # (GitHub -> release-assets.githubusercontent.com / Azure blob), so it
+        # errors "failed to retrieve..." / "could not read control file from
+        # URL" and the update silently hangs. `-u` does not fix it (zsync
+        # ignores it and keeps the relative URL from the .zsync). wget follows
+        # the redirect fine, so when an update is needed we reuse
+        # install_zen_browser (wget-based) to reinstall over the old copy.
+        local target_sha1 current_sha1
+        target_sha1=$(grep -a -m1 '^SHA-1:' "$zsync_file" | awk '{print $2}' || true)
+        current_sha1=$(sha1sum ~/.local/share/AppImage/$file_base.AppImage | awk '{print $1}')
         rm -f "$zsync_file"
+        if [ -n "$target_sha1" ] && [ "$current_sha1" = "$target_sha1" ]; then
+            log_info "(｡♥‿♥｡) Congrats! Zen Browser is up-to-date!"
+            return 0
+        fi
+        # An update is needed — reinstall over the existing copy by reusing
+        # the install path (wget to a temp file, process_appimage, swap into
+        # place). This works even while Zen is running: `mv` (rename) over a
+        # running executable is allowed, unlike open-for-write which fails with
+        # "Text file busy" (ETXTBSY).
+        install_zen_browser "$is_twilight"
+        if pgrep -f "$file_base.AppImage" >/dev/null 2>&1; then
+            log_info "Zen Browser is currently running — restart it to use the new version."
+        fi
     else
         log_err "Zen Browser is not installed!"
         main_menu
