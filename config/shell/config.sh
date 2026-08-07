@@ -8,6 +8,10 @@ if [ "$SHELL_TYPE" = "bash" ]; then
   shopt -s histappend
 elif [ "$SHELL_TYPE" = "zsh" ]; then
   setopt APPEND_HISTORY
+
+  # macOS zsh defaults to vi-mode when $EDITOR contains "vi" (e.g. nvim),
+  # breaking Ctrl-A/R/E/K etc. Force emacs keybindings.
+  [ "$(uname -s)" = "Darwin" ] && bindkey -e
 fi
 
 # for setting history length
