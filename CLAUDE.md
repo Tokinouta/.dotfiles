@@ -65,6 +65,22 @@ When adding host-specific config, follow the `case "$(hostname)"` (bash/zsh) or 
 
 `aliases.sh` rebinds core commands to modern replacements: `ls→eza`, `grep→rg`, `cat→bat`, `find→fd`, `du→dust`, `cd→z` (zoxide). `cd` is **not** the builtin — use `builtin cd` or `command cd` in scripts where real `cd` behavior matters. The `claude` alias forces `--permission-mode bypassPermissions`. The same shadowing applies in fish (`config/fish/aliases.fish`); `cd` there is likewise not the builtin (it wraps zoxide's `z`).
 
+## Commit conventions
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description` where `scope` is optional but encouraged when the change touches a specific subsystem.
+
+| Type | Use |
+|------|-----|
+| `feat` | New feature or capability |
+| `fix` | Bug fix |
+| `refactor` | Code restructuring (no behavior change) |
+| `docs` | Documentation only |
+| `chore` | Maintenance, dependency bumps, cleanup |
+
+Scopes: `shell`, `config`, `script`, `style`, or the name of the extras file (e.g. `brew`, `nvm`). Omit scope for cross-cutting changes.
+
+All messages are lowercase, imperative mood, no trailing period.
+
 ## Scripts on PATH
 
 `env.sh` (bash/zsh) and `env.fish` (fish) prepend `$HOME/.dotfiles/scripts` to `PATH`, so any executable script dropped in `scripts/` becomes runnable by name — the same drop-in pattern `extras/` uses for sourced inits. **Scripts are run, not sourced**: they must be executable (`chmod +x`) and self-contained. Don't add scripts that execute side effects on `source`, or every new shell will run them.
