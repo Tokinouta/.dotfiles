@@ -18,15 +18,6 @@ case "$(hostname)" in
     ;;
 esac
 
-# modify rustup source and source cargo env
-export RUSTUP_UPDATE_ROOT="https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup"
-export RUSTUP_DIST_SERVER="https://mirrors.tuna.tsinghua.edu.cn/rustup"
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-
-# JavaScript runtimes: bun
-BUN_INSTALL="$HOME/.bun"
-[ -d "$BUN_INSTALL/bin" ] && export PATH="$BUN_INSTALL/bin:$PATH"
-
 # Starship prompt (shell-aware)
 command -v starship >/dev/null && eval "$(starship init "$SHELL_TYPE")"
 
