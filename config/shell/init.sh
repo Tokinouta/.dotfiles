@@ -17,5 +17,7 @@ for file in "$DOTFILES/extras/"*.sh; do
   [ -f "$file" ] && source "$file"
 done
 
+[ -f "$DOTFILES/post-init.sh" ] && source "$DOTFILES/post-init.sh"
+
 # Clean up — downstream files use SHELL_TYPE, not DOTFILES
 unset DOTFILES
