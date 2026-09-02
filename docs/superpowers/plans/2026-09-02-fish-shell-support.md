@@ -583,7 +583,10 @@ Replace the table (also correcting stale `env.sh` values from the recent starshi
 - [ ] **Step 5: Touch up the remaining sections**
 
 - "Shell functions" intro line → `Defined in `config/shell/functions.sh` (bash/zsh) and `config/fish/functions.fish` (fish):`
-- "Host detection" intro line → `Several files branch on the host name — `case "$(hostname)"` in bash/zsh files, `switch (hostname)` in fish files. `Dayong` is the work PC:` and append a third bullet: `- `extras/conda.sh` / `extras/conda.fish` — Dayong's miniconda path`
+- "Load order" numbered item 2 → `2. `config/shell/env.sh` — env vars, `PATH` (tool inits live in `extras/`; starship/zoxide in `post-init.sh`)` (current item 2 still credits env.sh with rustup/cargo/bun/starship/zoxide, contradicting the corrected table)
+- "Host detection" intro line → `Several files branch on the host name — `case "$(hostname)"` in bash/zsh files, `switch (hostname)` in fish files. `Dayong` is the work PC:`
+- "Host detection" bullets 1-2 get their fish counterparts: `env.sh` → `env.sh` / `env.fish` and `aliases.sh` → `aliases.sh` / `aliases.fish`; append a third bullet: `- `extras/conda.sh` / `extras/conda.fish` — Dayong's miniconda path`
+- "Host detection" closing line → `When adding host-specific config, follow the `case "$(hostname)"` (bash/zsh) or `switch (hostname)` (fish) pattern rather than hardcoding paths that don't exist on other machines.`
 - "Aliases shadow standard commands" — append: `The same shadowing applies in fish (`config/fish/aliases.fish`); `cd` there is likewise not the builtin (it wraps zoxide's `z`).`
 - "Scripts on PATH" first sentence → `` `env.sh` (bash/zsh) and `env.fish` (fish) prepend `$HOME/.dotfiles/scripts` to `PATH`, so any executable script dropped in `scripts/` becomes runnable by name — the same drop-in pattern `extras/` uses for sourced inits. ``
 
