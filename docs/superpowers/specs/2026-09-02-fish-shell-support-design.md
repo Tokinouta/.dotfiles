@@ -86,7 +86,7 @@ Verified empirically on fish 4.2.1:
 
 The `--path` flag is mandatory. Without it, `fish_add_path` bakes entries into per-host hidden state that survives config edits: removing a path from `env.fish` would leave it in every future session, and PATH would drift per host. With `--path`, every session rebuilds `$PATH` from the repo config — reproducing bash semantics exactly (bash rebuilds PATH from `env.sh` on every interactive shell) and keeping the repo the single source of truth across hosts.
 
-To reproduce the exact bash PATH order (call order `~/.local/bin`, `scripts/`, Android paths, `go/bin` — each bash `export PATH=x:$PATH` prepends, so the last one ends up first), `env.fish` calls `fish_add_path --path` once per path in the same statement order as `env.sh`. The final PATH order is identical to bash's.
+To reproduce the exact bash PATH order, `env.fish` mirrors `env.sh`'s statement structure: single-entry `export PATH=x:$PATH` lines become single `fish_add_path --path x` calls (statement order preserved), and `env.sh`'s grouped Android export (one line prepending ndk, platform-tools, tools, build-tools, gdb) becomes ONE multi-argument `fish_add_path --path` call — argument order is preserved, matching the group's line order. The final PATH order is identical to bash's: `go/bin`, then the Android group in line order, then `scripts`, then `~/.local/bin`.
 
 ### History / window size
 

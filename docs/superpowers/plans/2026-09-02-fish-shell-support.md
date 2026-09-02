@@ -43,19 +43,18 @@ set -gx PAGER bat
 # Expose scripts shipped with the dotfiles (e.g. update-zen) as commands.
 # Scripts here must be executable and self-contained — they are run, not sourced.
 # fish_add_path --path prepends to $PATH only (no persistent fish_user_paths
-# state) and is idempotent; calling in the same order as env.sh's
-# `export PATH=x:$PATH` chain reproduces bash's final PATH order exactly.
+# state) and is idempotent. Single-entry exports in env.sh map to single
+# calls; env.sh's grouped Android export maps to one multi-arg call that
+# keeps the group's line order — reproducing bash's final PATH order exactly.
 fish_add_path --path ~/.local/bin
 fish_add_path --path ~/.dotfiles/scripts
 
 # Android tools (Linux work PC only)
 switch (hostname)
     case Dayong
-        fish_add_path --path ~/android-sdk-linux/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin
-        fish_add_path --path ~/android-sdk-linux/platform-tools
-        fish_add_path --path ~/android-sdk-linux/tools
-        fish_add_path --path ~/android-sdk-linux/build-tools/33.0.0
-        fish_add_path --path ~/installed_softwares/gdb-11-xiaomi/bin
+        # env.sh prepends this group in one export, so keep the group's line
+        # order with a single multi-arg call (argument order is preserved).
+        fish_add_path --path ~/android-sdk-linux/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin ~/android-sdk-linux/platform-tools ~/android-sdk-linux/tools ~/android-sdk-linux/build-tools/33.0.0 ~/installed_softwares/gdb-11-xiaomi/bin
         # add go binary path to $PATH
         fish_add_path --path ~/go/bin
 end
@@ -77,17 +76,17 @@ Expected (exactly, on host Dayong — every dir exists so nothing is skipped):
 nvim
 bat
 /home/dayong/go/bin
-/home/dayong/installed_softwares/gdb-11-xiaomi/bin
-/home/dayong/android-sdk-linux/build-tools/33.0.0
-/home/dayong/android-sdk-linux/tools
-/home/dayong/android-sdk-linux/platform-tools
 /home/dayong/android-sdk-linux/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin
+/home/dayong/android-sdk-linux/platform-tools
+/home/dayong/android-sdk-linux/tools
+/home/dayong/android-sdk-linux/build-tools/33.0.0
+/home/dayong/installed_softwares/gdb-11-xiaomi/bin
 /home/dayong/.dotfiles/scripts
 /home/dayong/.local/bin
 /usr/bin
 /bin
 ```
-This also proves the PATH *order* matches bash's `env.sh` result (bash: local/bin, scripts, then Android chain, then go — each prepended, so go ends up first).
+This also proves the PATH *order* matches bash's `env.sh` result exactly: env.sh prepends local/bin, then scripts, then the Android group (ndk→gdb) in one export, then go — so go ends up first and the group keeps its line order. `bash -ic 'echo $PATH'` shows the same sequence.
 
 - [ ] **Step 4: Commit**
 
@@ -496,7 +495,7 @@ starship-ok
 Run:
 ```bash
 fish -c 'echo SHELL_TYPE=$SHELL_TYPE; functions -q extract; or echo no-functions-noninteractive'
-fish -i -c 'set -l p (string join : $PATH); string match -q "*go/bin*gdb-11-xiaomi*build-tools/33.0.0*android-sdk-linux/tools*platform-tools*ndk/28.0.13004108*dotfiles/scripts*.local/bin*" $p; and echo path-order-ok; contains ~/.cargo/bin $PATH; and echo cargo-ok'
+fish -i -c 'set -l p (string join : $PATH); string match -q "*go/bin*ndk/28.0.13004108*platform-tools*android-sdk-linux/tools*build-tools/33.0.0*gdb-11-xiaomi*dotfiles/scripts*.local/bin*" $p; and echo path-order-ok; contains ~/.cargo/bin $PATH; and echo cargo-ok'
 ```
 Expected:
 ```
