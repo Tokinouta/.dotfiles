@@ -16,7 +16,7 @@ To add support for a new POSIX shell (e.g. ksh), add its detection in `init.sh` 
 
 `~/.bashrc` or `~/.zshrc` sources `config/shell/init.sh`, which loads (in order):
 1. `config/shell/config.sh` — shell options (bash: `shopt`, zsh: `setopt`)
-2. `config/shell/env.sh` — env vars, `PATH`, rustup mirrors, cargo, bun, starship, zoxide
+2. `config/shell/env.sh` — env vars, `PATH` (tool inits live in `extras/`; starship/zoxide in `post-init.sh`)
 3. `config/shell/aliases.sh` — aliases (mostly modern CLI replacements)
 4. `config/shell/functions.sh` — shell functions
 5. `config/shell/extras/*.sh` — auto-globbed; each file is a self-contained tool init (`conda.sh`, `nvm.sh`)
@@ -51,11 +51,11 @@ Defined in `config/shell/functions.sh` (bash/zsh) and `config/fish/functions.fis
 ## Host detection
 
 Several files branch on the host name — `case "$(hostname)"` in bash/zsh files, `switch (hostname)` in fish files. `Dayong` is the work PC:
-- `env.sh` — adds Android NDK/platform-tools/gdb + Go binary paths (Dayong only)
-- `aliases.sh` — adds `lldb` alias pointing to `/usr/bin/lldb` (Dayong only)
+- `env.sh` / `env.fish` — adds Android NDK/platform-tools/gdb + Go binary paths (Dayong only)
+- `aliases.sh` / `aliases.fish` — adds `lldb` alias pointing to `/usr/bin/lldb` (Dayong only)
 - `extras/conda.sh` / `extras/conda.fish` — Dayong's miniconda path
 
-When adding host-specific config, follow the `case "$(hostname)"` pattern rather than hardcoding paths that don't exist on other machines.
+When adding host-specific config, follow the `case "$(hostname)"` (bash/zsh) or `switch (hostname)` (fish) pattern rather than hardcoding paths that don't exist on other machines.
 
 ## Aliases shadow standard commands
 
