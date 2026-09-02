@@ -452,7 +452,7 @@ if status is-interactive
 end
 ```
 
-Note: if `extras/` has no `.fish` files, the glob stays literal, `test -f` fails, and it is skipped — same safety net as `init.sh`.
+Note: if `extras/` has no `.fish` files, fish expands the unmatched glob to zero elements, so the loop body is silently skipped — same safety net as `init.sh` (where a literal unmatched glob fails `test -f`).
 
 - [ ] **Step 2: Replace host `~/.config/fish/config.fish` content**
 
