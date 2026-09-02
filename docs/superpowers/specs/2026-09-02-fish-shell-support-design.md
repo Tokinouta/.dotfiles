@@ -74,16 +74,19 @@ Everything except the `SHELL_TYPE` export is wrapped in `if status is-interactiv
 
 Verified against the generated zoxide fish code (zoxide on this host): it defines `__zoxide_cd_internal` as a copy of fish's internal `cd` specifically "to make it possible to use `alias cd=z` without causing an infinite loop". The `zoxide: infinite loop detected` warning only fires when a real loop occurs. The alternative (`zoxide init fish --cmd cd`) would drop the `z` command entirely, breaking parity.
 
-### fish_add_path semantics
+### fish_add_path semantics — always call with `--path`
 
 Verified empirically on fish 4.2.1:
 
 - **Prepends** each path to the front of `$PATH`.
-- **Multi-argument order is preserved**: `fish_add_path a b` yields `a b <existing>`.
-- **Idempotent** — already-present paths are not duplicated.
+- **Multi-argument order is preserved**: `fish_add_path --path a b` yields `a b <existing>`.
+- **Idempotent within a session** — already-present paths are not duplicated.
 - **Silently skips non-existent directories** — a missing `~/.bun/bin` cannot pollute PATH, which is why `bun.fish` needs no existence guard.
+- **Default mode persists to the universal `fish_user_paths`** (`~/.config/fish/fish_variables`) — which is why every call in this config uses `--path` (writes `$PATH` only, per-session).
 
-To reproduce the exact bash PATH order (call order `~/.local/bin`, `scripts/`, Android paths, `go/bin` — each bash `export PATH=x:$PATH` prepends, so the last one ends up first), `env.fish` calls `fish_add_path` once per path in the same statement order as `env.sh`. The final PATH order is identical to bash's.
+The `--path` flag is mandatory. Without it, `fish_add_path` bakes entries into per-host hidden state that survives config edits: removing a path from `env.fish` would leave it in every future session, and PATH would drift per host. With `--path`, every session rebuilds `$PATH` from the repo config — reproducing bash semantics exactly (bash rebuilds PATH from `env.sh` on every interactive shell) and keeping the repo the single source of truth across hosts.
+
+To reproduce the exact bash PATH order (call order `~/.local/bin`, `scripts/`, Android paths, `go/bin` — each bash `export PATH=x:$PATH` prepends, so the last one ends up first), `env.fish` calls `fish_add_path --path` once per path in the same statement order as `env.sh`. The final PATH order is identical to bash's.
 
 ### History / window size
 
@@ -120,7 +123,7 @@ Untouched (two lines, by design).
    - PATH contains `~/.local/bin`, `~/.dotfiles/scripts`, and on Dayong the Android SDK + `go/bin` paths, in bash-equivalent order
    - `type extract`, `functions cl check_inotify` resolve
    - `alias`-created functions resolve: `ls` → eza, `cat` → bat, `cd` → `z`-wrapping function
-   - `functions starship_prompt` and `type conda` resolve (starship + conda hooks loaded)
+   - `set -q STARSHIP_SHELL` is true (starship sets it; modern starship defines `fish_prompt`/`fish_right_prompt`, not `starship_prompt`) and `type conda` resolves (starship + conda hooks loaded)
 3. **Regression:**
    - `bash -ic 'echo $SHELL_TYPE; type extract; echo $PATH'` behaves exactly as before
    - zsh smoke test if zsh is installed on the host

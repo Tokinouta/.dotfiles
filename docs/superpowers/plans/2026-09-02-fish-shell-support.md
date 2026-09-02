@@ -17,6 +17,7 @@
 - nvm and openclaw get **no fish port** (spec decision).
 - Host fish dirs (`~/.config/fish/{conf.d,functions,completions,fish_variables}`) remain untouched; only the content of `~/.config/fish/config.fish` is replaced (Task 6).
 - `extras/*.fish` must stay auto-discovered by glob — no `init.fish` edit needed for new tools.
+- Every `fish_add_path` call in config files uses `--path` (session-scoped `$PATH` writes only — never the default persistent `fish_user_paths`, which would bake per-host state that survives config edits). See the spec's "fish_add_path semantics" section.
 - Repo has no test framework. "Tests" are the explicit verification commands with expected outputs in each task. **TDD note:** for config files the cycle is write → syntax-check (`fish -n`) → functional check → commit; there is no failing-test-first step because the artifact is configuration, not code.
 - Commit style: `feat(fish): ...` / `docs: ...`, each ending with `Co-Authored-By: Claude Code <noreply@anthropic.com>`. Commit to the current branch (`main`), matching this repo's convention.
 - Host facts (verified 2026-09-02): hostname is `Dayong`, fish 4.2.1, zsh not installed, all `env.sh` PATH dirs exist under `$HOME`, `~/.bun` does not exist, miniconda at `/home/dayong/workspace/others/miniconda3`, starship + zoxide + conda installed.
@@ -41,21 +42,22 @@ set -gx PAGER bat
 
 # Expose scripts shipped with the dotfiles (e.g. update-zen) as commands.
 # Scripts here must be executable and self-contained — they are run, not sourced.
-# fish_add_path prepends and is idempotent; calling in the same order as env.sh's
+# fish_add_path --path prepends to $PATH only (no persistent fish_user_paths
+# state) and is idempotent; calling in the same order as env.sh's
 # `export PATH=x:$PATH` chain reproduces bash's final PATH order exactly.
-fish_add_path ~/.local/bin
-fish_add_path ~/.dotfiles/scripts
+fish_add_path --path ~/.local/bin
+fish_add_path --path ~/.dotfiles/scripts
 
 # Android tools (Linux work PC only)
 switch (hostname)
     case Dayong
-        fish_add_path ~/android-sdk-linux/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin
-        fish_add_path ~/android-sdk-linux/platform-tools
-        fish_add_path ~/android-sdk-linux/tools
-        fish_add_path ~/android-sdk-linux/build-tools/33.0.0
-        fish_add_path ~/installed_softwares/gdb-11-xiaomi/bin
+        fish_add_path --path ~/android-sdk-linux/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin
+        fish_add_path --path ~/android-sdk-linux/platform-tools
+        fish_add_path --path ~/android-sdk-linux/tools
+        fish_add_path --path ~/android-sdk-linux/build-tools/33.0.0
+        fish_add_path --path ~/installed_softwares/gdb-11-xiaomi/bin
         # add go binary path to $PATH
-        fish_add_path ~/go/bin
+        fish_add_path --path ~/go/bin
 end
 ```
 
@@ -224,15 +226,15 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 # (~/.cargo/env is POSIX; its only effect is this PATH entry)
 set -gx RUSTUP_UPDATE_ROOT "https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup"
 set -gx RUSTUP_DIST_SERVER "https://mirrors.tuna.tsinghua.edu.cn/rustup"
-fish_add_path ~/.cargo/bin
+fish_add_path --path ~/.cargo/bin
 ```
 
 - [ ] **Step 2: Create `config/fish/extras/bun.fish`**
 
 ```fish
 # JavaScript runtimes: bun
-# fish_add_path skips non-existent dirs, so a missing ~/.bun can't pollute PATH
-fish_add_path ~/.bun/bin
+# fish_add_path --path skips non-existent dirs, so a missing ~/.bun can't pollute PATH
+fish_add_path --path ~/.bun/bin
 ```
 
 - [ ] **Step 3: Create `config/fish/extras/brew.fish`**
@@ -243,10 +245,10 @@ if test (uname -s) = Darwin; and test -x /opt/homebrew/bin/brew
     set -gx HOMEBREW_PREFIX "/opt/homebrew"
     set -gx HOMEBREW_CELLAR "/opt/homebrew/Cellar"
     set -gx HOMEBREW_REPOSITORY "/opt/homebrew"
-    fish_add_path /opt/homebrew/bin /opt/homebrew/sbin
+    fish_add_path --path /opt/homebrew/bin /opt/homebrew/sbin
     set -gx HOMEBREW_BREW_GIT_REMOTE "https://mirror.nju.edu.cn/git/homebrew/brew.git"
     set -gx HOMEBREW_CORE_GIT_REMOTE "https://mirror.nju.edu.cn/git/homebrew/homebrew-core.git"
-    fish_add_path /opt/homebrew/opt/ffmpeg-full/bin
+    fish_add_path --path /opt/homebrew/opt/ffmpeg-full/bin
 end
 ```
 
@@ -374,7 +376,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: `starship` and `zoxide` on PATH (guarded with `command -q`); the `cd` alias from `aliases.fish` (Task 2) resolves the `z` this file defines — lazily, so definition order does not matter.
-- Produces: `starship_prompt` function (starship), `z` and `zi` functions (zoxide). Verified fact from zoxide's generated code: it defines `__zoxide_cd_internal` (a copy of fish's internal `cd`) precisely so `alias cd=z` cannot loop.
+- Produces: starship-managed `fish_prompt`/`fish_right_prompt` plus exported `STARSHIP_SHELL` (modern starship no longer defines a `starship_prompt` function), and `z`/`zi` functions (zoxide). Verified fact from zoxide's generated code: it defines `__zoxide_cd_internal` (a copy of fish's internal `cd`) precisely so `alias cd=z` cannot loop.
 
 - [ ] **Step 1: Create `config/fish/post-init.fish`**
 
@@ -397,7 +399,7 @@ Expected: `syntax-ok`
 
 Run:
 ```bash
-fish -i -c 'source ~/.dotfiles/config/fish/aliases.fish; source ~/.dotfiles/config/fish/post-init.fish; functions -q starship_prompt; and echo starship-ok; functions -q z; and echo z-ok; cd /tmp; and pwd'
+fish -i -c 'source ~/.dotfiles/config/fish/aliases.fish; source ~/.dotfiles/config/fish/post-init.fish; set -q STARSHIP_SHELL; and echo starship-ok; functions -q z; and echo z-ok; cd /tmp; and pwd'
 ```
 Expected:
 ```
@@ -470,9 +472,9 @@ Expected: `syntax-ok`
 
 Run:
 ```bash
-fish -i -c 'echo SHELL_TYPE=$SHELL_TYPE; for f in ls cd .. ... lldb claude extract cl check_inotify z conda starship_prompt; functions -q $f; and echo $f-ok; end'
+fish -i -c 'echo SHELL_TYPE=$SHELL_TYPE; for f in ls cd .. ... lldb claude extract cl check_inotify z conda; functions -q $f; and echo $f-ok; end; set -q STARSHIP_SHELL; and echo starship-ok'
 ```
-Expected (12 `-ok` lines; `lldb-ok` is Dayong-only):
+Expected (11 function `-ok` lines plus `starship-ok`, which probes the `STARSHIP_SHELL` env var — modern starship defines `fish_prompt`/`fish_right_prompt`, not `starship_prompt`; `lldb-ok` is Dayong-only):
 ```
 SHELL_TYPE=fish
 ls-ok
@@ -486,7 +488,7 @@ cl-ok
 check_inotify-ok
 z-ok
 conda-ok
-starship_prompt-ok
+starship-ok
 ```
 
 - [ ] **Step 5: Integration check — interactive guard and PATH**
