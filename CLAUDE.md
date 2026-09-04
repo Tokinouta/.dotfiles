@@ -37,7 +37,7 @@ These tools are initialized on shell startup via the load chain above:
 | brew | `extras/brew.sh` / `extras/brew.fish` | Homebrew (macOS only) |
 | bun | `extras/bun.sh` / `extras/bun.fish` | JavaScript runtime |
 | conda | `extras/conda.sh` / `extras/conda.fish` | Python environment management |
-| nvm | `extras/nvm.sh` (bash/zsh only) | Node.js version management — nvm has no fish support |
+| nvm | `extras/nvm.sh` / `extras/nvm.fish` | Node.js version management — bash/zsh source nvm.sh; fish only resolves the default alias onto `PATH` (nvm is a bash function library fish cannot source) |
 
 `starship.toml` lives in the repo but is **not** symlinked into `$HOME` — starship finds it via its own lookup path.
 
