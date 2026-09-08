@@ -50,6 +50,7 @@ Defined in `config/shell/functions.sh` (bash/zsh) and `config/fish/functions.fis
 - `extract <archive>` — unpack `.tar.bz2`, `.tar.gz`, or `.zip`
 - `cl` — cross-platform terminal clear
 - `check_inotify` — show processes with active inotify watchers (sorted by count)
+- `cc <expr>` — calculator: `python3` with the `math` module in scope; a zsh-only `noglob` alias is defined right below the function so `cc (1+2)*3` works unquoted (in bash, quote parens/globs)
 
 ## Host detection
 
