@@ -20,10 +20,11 @@ To add support for a new POSIX shell (e.g. ksh), add its detection in `init.sh` 
 3. `config/shell/aliases.sh` — aliases (mostly modern CLI replacements)
 4. `config/shell/functions.sh` — shell functions
 5. `config/shell/extras/*.sh` — auto-globbed; each file is a self-contained tool init (`conda.sh`, `nvm.sh`)
+6. `config/shell/post-init.sh` — starship/zoxide init, then zsh-only plugins (`zsh-autosuggestions`, `zsh-syntax-highlighting`); runs last per those plugins' docs (on zsh < 5.9 syntax-highlighting wraps all ZLE widgets at source time)
 
 Fish loads a parallel chain: `~/.config/fish/config.fish` sources `config/fish/init.fish`, which — in interactive sessions only — loads `config/fish/env.fish`, `config/fish/aliases.fish`, `config/fish/functions.fish`, `config/fish/extras/*.fish` (auto-globbed, same drop-in pattern), then `config/fish/post-init.fish`. Non-interactive fish only gets `SHELL_TYPE=fish`.
 
-To add a new tool's shell integration, drop `config/shell/extras/<tool>.sh` (bash/zsh) and/or `config/fish/extras/<tool>.fish` (fish) — the globs pick them up automatically. No edit to either init file is needed.
+To add a new tool's shell integration, drop `config/shell/extras/<tool>.sh` (bash/zsh) and/or `config/fish/extras/<tool>.fish` (fish) — the globs pick them up automatically. No edit to either init file is needed. The exception is tooling whose docs require sourcing at the end of the rc — e.g. `zsh-syntax-highlighting`, which on zsh < 5.9 wraps all ZLE widgets at source time. Those go in `post-init.sh` instead; the `extras/` glob runs too early for them.
 
 ## Tool ecosystem
 
@@ -33,6 +34,8 @@ These tools are initialized on shell startup via the load chain above:
 |------|-------|---------|
 | starship | `post-init.sh` / `post-init.fish` | Prompt (minimal config in `starship.toml`) |
 | zoxide | `post-init.sh` / `post-init.fish` | `z`/`cd` jump (`cd` aliased to `z` in both `aliases.sh` and `aliases.fish`) |
+| zsh-autosuggestions | `post-init.sh` (zsh only) | command suggestions while typing — fish suggests natively, so no fish counterpart |
+| zsh-syntax-highlighting | `post-init.sh` (zsh only) | command syntax highlighting, sourced last per its docs — fish highlights natively |
 | cargo/rustup | `extras/cargo.sh` / `extras/cargo.fish` | Rust toolchain (mirrored via Tsinghua) |
 | brew | `extras/brew.sh` / `extras/brew.fish` | Homebrew (macOS only) |
 | bun | `extras/bun.sh` / `extras/bun.fish` | JavaScript runtime |
