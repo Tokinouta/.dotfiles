@@ -17,8 +17,8 @@ To add support for a new POSIX shell (e.g. ksh), add its detection in `init.sh` 
 `~/.bashrc` or `~/.zshrc` sources `config/shell/init.sh`, which loads (in order):
 1. `config/shell/config.sh` — shell options (bash: `shopt`, zsh: `setopt`)
 2. `config/shell/env.sh` — env vars, `PATH` (tool inits live in `extras/`; starship/zoxide in `post-init.sh`)
-3. `config/shell/aliases.sh` — aliases (mostly modern CLI replacements)
-4. `config/shell/functions.sh` — shell functions
+3. `config/shell/functions.sh` — shell functions (before aliases because zsh expands aliases while parsing function definitions)
+4. `config/shell/aliases.sh` — aliases (mostly modern CLI replacements)
 5. `config/shell/extras/*.sh` — auto-globbed; each file is a self-contained tool init (`conda.sh`, `nvm.sh`)
 6. `config/shell/post-init.sh` — starship/zoxide init, then zsh-only plugins (`zsh-autosuggestions`, `zsh-syntax-highlighting`); runs last per those plugins' docs (on zsh < 5.9 syntax-highlighting wraps all ZLE widgets at source time)
 
