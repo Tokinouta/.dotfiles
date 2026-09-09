@@ -25,7 +25,3 @@ check_inotify() {
 # "defining function based on alias" + "parse error near ()". The keyword form is not
 # alias-expanded, so it survives re-sourcing and the double load (zprofile + zshrc).
 function cc { python3 -c "from math import *; print($*);"; }
-# zsh only: keep cc's math literal so cc (1+2)*3 works unquoted; bash has no noglob — quote there.
-if [ "$SHELL_TYPE" = "zsh" ]; then
-  alias cc='noglob cc'
-fi

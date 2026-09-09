@@ -8,6 +8,7 @@ alias du='dust'
 alias cd='z'
 alias ..='cd ..'
 alias ...='cd ../..'
+alias claude='claude --permission-mode bypassPermissions'
 
 # Host-specific aliases
 case "$(hostname)" in
@@ -16,4 +17,9 @@ case "$(hostname)" in
     ;;
 esac
 
-alias claude='claude --permission-mode bypassPermissions'
+# Shell-specific aliases
+# zsh only: keep cc's math literal so cc (1+2)*3 works unquoted; bash has no noglob — quote there.
+if [ "$SHELL_TYPE" = "zsh" ]; then
+  alias cc='noglob cc'
+fi
+

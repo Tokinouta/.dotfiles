@@ -9,8 +9,8 @@ export SHELL_TYPE="$(basename "$SHELL")"
 
 [ -f "$DOTFILES/config.sh" ]    && source "$DOTFILES/config.sh"
 [ -f "$DOTFILES/env.sh" ]       && source "$DOTFILES/env.sh"
-[ -f "$DOTFILES/aliases.sh" ]   && source "$DOTFILES/aliases.sh"
 [ -f "$DOTFILES/functions.sh" ] && source "$DOTFILES/functions.sh"
+[ -f "$DOTFILES/aliases.sh" ]   && source "$DOTFILES/aliases.sh"
 
 # Load extras (like conda, nvm, etc.)
 for file in "$DOTFILES/extras/"*.sh; do
