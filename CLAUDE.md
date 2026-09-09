@@ -39,8 +39,8 @@ These tools are initialized on shell startup via the load chain above:
 | cargo/rustup | `extras/cargo.sh` / `extras/cargo.fish` | Rust toolchain (mirrored via Tsinghua) |
 | brew | `extras/brew.sh` / `extras/brew.fish` | Homebrew (macOS only) |
 | bun | `extras/bun.sh` / `extras/bun.fish` | JavaScript runtime |
-| conda | `extras/conda.sh` / `extras/conda.fish` | Python environment management |
-| nvm | `extras/nvm.sh` / `extras/nvm.fish` | Node.js version management — bash/zsh source nvm.sh; fish only resolves the default alias onto `PATH` (nvm is a bash function library fish cannot source) |
+| conda | `extras/conda.sh` / `extras/conda.fish` | Python environment management — bash/zsh lazy-load the shell hook (~350ms) until first `conda`/`mamba` call |
+| nvm | `extras/nvm.sh` / `extras/nvm.fish` | Node.js version management — bash/zsh lazy-load nvm.sh (~500ms) until first `nvm` call; fish only resolves the default alias onto `PATH` (nvm is a bash function library fish cannot source) |
 
 `starship.toml` lives in the repo but is **not** symlinked into `$HOME` — starship finds it via its own lookup path.
 
