@@ -1,1 +1,7 @@
+# Auxiliary files
 .sisyphus/
+.superpowers/
+.mypy_cache/
+
+# Runtime cache
+__pycache__/
