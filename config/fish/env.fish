@@ -11,6 +11,9 @@ set -gx PAGER bat
 fish_add_path --path ~/.local/bin
 fish_add_path --path ~/.dotfiles/scripts
 
+# Point starship at the config shipped in this repo.
+set -gx STARSHIP_CONFIG ~/.dotfiles/starship.toml
+
 # Android tools (Linux work PC only)
 switch (hostname)
     case Dayong

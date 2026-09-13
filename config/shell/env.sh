@@ -9,6 +9,9 @@ DOTFILES_ROOT="${HOME}/.dotfiles"
 [ -d "$DOTFILES_ROOT/scripts" ] && export PATH="$DOTFILES_ROOT/scripts:$PATH"
 unset DOTFILES_ROOT
 
+# Point starship at the config shipped in this repo.
+export STARSHIP_CONFIG="$HOME/.dotfiles/starship.toml"
+
 # Android tools (Linux work PC only)
 case "$(hostname)" in
   Dayong)
