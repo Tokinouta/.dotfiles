@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+"""Vote Gerrit labels on the current patch set of each change given.
+
+Usage:
+    vote verified  [options] <change-id-or-url> [<change-id-or-url> ...]
+    vote presubmit [options] <change-id-or-url> [<change-id-or-url> ...]
+
+`verified` casts its vote immediately; `presubmit` waits a cadence (default
+300s) between votes. Both resolve and validate every change first, re-resolve
+the current patch set right before each vote (so a freshly uploaded patch set
+is not missed), and abort on the first failure.
+
+Subcommands differ only in data, so the shared pipeline below is driven by the
+COMMANDS registry — a new label is a new CommandSpec entry, no core changes.
+Everything talks to Gerrit over plain `ssh gerrit ...`; the only dependencies
+are the Python standard library and an ssh binary.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
+from typing import Any
+
+DEFAULT_HOST = "gerrit.pt.mioffice.cn"
+DEFAULT_PORT = "29418"
+DEFAULT_USER = "houboyao"
+DEFAULT_VOTE = "+1"
+
+# Trailing "/+/<digits>" of a Gerrit change URL, e.g. .../repo/+/123456[/].
+CHANGE_URL_RE = re.compile(r"/\+/([0-9]+)/?$")
+
+
+class VoteError(Exception):
+    """Fatal resolution or vote failure; reported as `error: ...` with exit 1."""
+
+
+def log(msg: str) -> None:
+    # flush keeps log lines ordered relative to stderr when stdout is piped.
+    print(msg, flush=True)
+
+
+def log_err(msg: str) -> None:
+    print(msg, file=sys.stderr, flush=True)
+
+
+def timestamp() -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S")
+
+
+# ---------------------------------------------------------------------------
+# Per-subcommand data and the registry that drives the shared pipeline.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CommandSpec:
+    help: str
+    label: str                     # default label; env GERRIT_LABEL overrides
+    cadence: int | None = None     # seconds between votes; None = vote immediately
+
+
+COMMANDS = {
+    "verified": CommandSpec(
+        help="vote Verified on each change, immediately with no cadence",
+        label="Verified",
+    ),
+    "presubmit": CommandSpec(
+        help="vote Presubmit-Ready on each change, waiting a cadence between votes",
+        label="Presubmit-Ready",
+        cadence=300,
+    ),
+}
+
+
+@dataclass(frozen=True)
+class Config:
+    host: str
+    port: str
+    user: str
+    label: str
+    vote: str
+
+
+@dataclass(frozen=True)
+class Change:
+    number: str
+    project: str
+    branch: str
+    patchset: str
+    revision: str
+    has_label: bool
+    is_open: bool
+
+
+@dataclass(frozen=True)
+class CurrentPatchSet:
+    number: str
+    revision: str
+    is_open: bool
+
+
+# ---------------------------------------------------------------------------
+# CLI: common options on every subparser, cadence options only where the
+# command's spec defines a cadence.
+# ---------------------------------------------------------------------------
+
+ENV_HELP = (
+    "environment defaults: GERRIT_HOST, GERRIT_PORT, GERRIT_USER, "
+    "GERRIT_LABEL (overrides this subcommand's default label), GERRIT_VOTE, "
+    "and CADENCE_SECONDS where --cadence is offered"
+)
+
+
+def env_default(name: str, fallback: str) -> str:
+    return os.environ.get(name, fallback)
+
+
+def non_negative_int(value: str) -> int:
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError(f"invalid seconds value: {value!r}")
+    if seconds < 0:
+        raise argparse.ArgumentTypeError(f"seconds must be >= 0, got {value!r}")
+    return seconds
+
+
+def env_int(name: str, fallback: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return fallback
+    try:
+        return non_negative_int(raw)
+    except argparse.ArgumentTypeError as exc:
+        log_err(f"error: environment variable {name}: {exc}")
+        sys.exit(2)
+
+
+def add_common_args(sp: argparse.ArgumentParser, spec: CommandSpec) -> None:
+    """Options shared by every subcommand; env vars supply their defaults."""
+    sp.add_argument("--host", default=env_default("GERRIT_HOST", DEFAULT_HOST),
+                    help="Gerrit SSH host (default: %(default)s)")
+    sp.add_argument("--port", default=env_default("GERRIT_PORT", DEFAULT_PORT),
+                    help="Gerrit SSH port (default: %(default)s)")
+    sp.add_argument("--user", default=env_default("GERRIT_USER", DEFAULT_USER),
+                    help="Gerrit SSH user (default: %(default)s)")
+    sp.add_argument("--label", default=env_default("GERRIT_LABEL", spec.label),
+                    help="label to vote (default: %(default)s)")
+    sp.add_argument("--vote", default=env_default("GERRIT_VOTE", DEFAULT_VOTE),
+                    help="value to vote (default: %(default)s)")
+    sp.add_argument("--dry-run", action="store_true",
+                    help="resolve and validate changes, print the plan, and exit "
+                         "without casting any vote or waiting")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="vote",
+        description="Vote a Gerrit label on the current patch set of each "
+                    "change, in the order given.")
+    sub = parser.add_subparsers(dest="command", metavar="<command>", required=True)
+    for name, spec in COMMANDS.items():
+        sp = sub.add_parser(name, help=spec.help, description=spec.help,
+                            epilog=ENV_HELP)
+        add_common_args(sp, spec)
+        if spec.cadence is not None:
+            sp.add_argument("--cadence", type=non_negative_int, metavar="SECONDS",
+                            default=env_int("CADENCE_SECONDS", spec.cadence),
+                            help="seconds to wait between votes (default: %(default)s)")
+            sp.add_argument("--wait-before-start", action="store_true",
+                            help="also wait CADENCE seconds before the first vote")
+        sp.add_argument("changes", nargs="+", metavar="change-id-or-url",
+                        help="Gerrit change number or change URL")
+    return parser
+
+
+# ---------------------------------------------------------------------------
+# Gerrit over ssh.
+# ---------------------------------------------------------------------------
+
+
+def extract_change_id(arg: str) -> str | None:
+    """Numeric change id from a bare number or the tail of a change URL."""
+    match = CHANGE_URL_RE.search(arg)
+    if match:
+        return match.group(1)
+    if re.fullmatch(r"[0-9]+", arg):
+        return arg
+    return None
+
+
+def ssh_gerrit(cfg: Config, *gerrit_args: str) -> subprocess.CompletedProcess[str]:
+    cmd = ["ssh", "-p", cfg.port, "-o", "LogLevel=ERROR",
+           f"{cfg.user}@{cfg.host}", *gerrit_args]
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError:
+        raise VoteError("ssh command not found; an ssh binary is required")
+
+
+def gerrit_query(cfg: Config, change: str, *flags: str) -> dict[str, Any]:
+    """First JSON record of `gerrit query change:<n>` — the matched change."""
+    proc = ssh_gerrit(cfg, "gerrit", "query", f"change:{change}",
+                      "--format", "JSON", *flags)
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip() or "no output"
+        raise VoteError(f"gerrit query failed for change {change} "
+                        f"(exit={proc.returncode}): {detail}")
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    if not lines:
+        raise VoteError(f"could not resolve change {change}: empty query output")
+    try:
+        return json.loads(lines[0])
+    except ValueError as exc:
+        raise VoteError(f"could not parse Gerrit query output for change "
+                        f"{change}: {exc}")
+
+
+def resolve_change(cfg: Config, change: str) -> Change:
+    d = gerrit_query(cfg, change, "--current-patch-set", "--submit-records")
+    patch_set: dict[str, Any] = d.get("currentPatchSet") or {}
+    labels = [entry.get("label")
+              for record in d.get("submitRecords", [])
+              for entry in record.get("labels", [])]
+    return Change(
+        number=str(d.get("number", "")),
+        project=d.get("project", ""),
+        branch=d.get("branch", ""),
+        patchset=str(patch_set.get("number", "")),
+        revision=patch_set.get("revision", ""),
+        has_label=cfg.label in labels,
+        is_open=bool(d.get("open")),
+    )
+
+
+def get_current_patchset(cfg: Config, number: str) -> CurrentPatchSet:
+    d = gerrit_query(cfg, number, "--current-patch-set")
+    patch_set: dict[str, Any] | None = d.get("currentPatchSet")
+    if not patch_set:
+        raise VoteError(f"could not re-resolve change #{number} before voting")
+    return CurrentPatchSet(
+        number=str(patch_set.get("number", "")),
+        revision=patch_set.get("revision", ""),
+        is_open=bool(d.get("open")),
+    )
+
+
+def cast_vote(cfg: Config, number: str, revision: str) -> str:
+    proc = ssh_gerrit(cfg, "gerrit", "review",
+                      "--label", f"{cfg.label}={cfg.vote}", revision)
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip() or "no output"
+        raise VoteError(f"vote failed on #{number} (exit={proc.returncode}): {detail}")
+    return (proc.stdout + proc.stderr).strip()
+
+
+# ---------------------------------------------------------------------------
+# Shared pipeline: parse ids -> resolve & validate -> dry-run stop -> wait ->
+# re-resolve -> vote -> cadence sleep.
+# ---------------------------------------------------------------------------
+
+
+def run(args: argparse.Namespace, spec: CommandSpec) -> None:
+    cfg = Config(host=args.host, port=args.port, user=args.user,
+                 label=args.label, vote=args.vote)
+
+    ids: list[str] = []
+    for arg in args.changes:
+        change_id = extract_change_id(arg)
+        if change_id is None:
+            log_err(f"error: cannot parse a Gerrit change id from: {arg}")
+            sys.exit(2)
+        ids.append(change_id)
+
+    log(f"Resolving {len(ids)} change(s) ...")
+    changes: list[Change] = []
+    for position, change_id in enumerate(ids, 1):
+        change = resolve_change(cfg, change_id)
+        if not change.number:
+            raise VoteError(f"could not resolve change {change_id}")
+        changes.append(change)
+        status = "open" if change.is_open else "closed"
+        availability = "yes" if change.has_label else "no"
+        log(f"  [{position}/{len(ids)}] #{change.number}  {change.project} @ "
+            f"{change.branch}  patchset={change.patchset}  rev={change.revision}  "
+            f"{cfg.label}-available={availability}  status={status}")
+        if not change.is_open:
+            raise VoteError(f"change #{change.number} is not open "
+                            f"(status={status}); refusing to vote.")
+        if not change.has_label:
+            raise VoteError(f"label '{cfg.label}' is not defined on "
+                            f"project '{change.project}'.")
+
+    if args.dry_run:
+        log("dry-run: no votes were cast.")
+        return
+
+    if spec.cadence is not None and args.wait_before_start:
+        log(f"Waiting {args.cadence}s before first vote ...")
+        time.sleep(args.cadence)
+
+    voted = 0
+    for change in changes:
+        if spec.cadence is not None and voted > 0:
+            log(f"Waiting {args.cadence}s before next vote ...")
+            time.sleep(args.cadence)
+
+        # Re-resolve right before voting so a freshly uploaded patch set is
+        # not missed.
+        fresh = get_current_patchset(cfg, change.number)
+        if not fresh.is_open:
+            raise VoteError(f"change #{change.number} is no longer open; "
+                            "aborting before voting it.")
+
+        log(f"[{timestamp()}] voting {cfg.label}={cfg.vote} on change "
+            f"#{change.number} (patchset={fresh.number}, rev={fresh.revision})")
+        output = cast_vote(cfg, change.number, fresh.revision)
+        if output:
+            log(f"  output: {output}")
+        log("  ok")
+        voted += 1
+
+    log(f"ALL_DONE {timestamp()}")
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = build_parser().parse_args(argv)
+    try:
+        run(args, COMMANDS[args.command])
+    except VoteError as exc:
+        log_err(f"error: {exc}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

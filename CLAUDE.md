@@ -90,3 +90,4 @@ Current scripts:
 - `extract.sh` — multi-format archive extractor (separate from the `extract` shell function)
 - `skip-boot-guide` — ADB commands to skip Android setup wizard on a connected device
 - `update-zen` — third-party MIT-licensed Zen Browser AppImage installer (preserve its license/credits when editing)
+- `vote` — Gerrit label voter (`vote verified` / `vote presubmit`); stdlib-only Python, subcommands driven by the COMMANDS registry in the script
