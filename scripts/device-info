@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Enable WiFi/BT and dump identifying info from a connected Android device.
+# Usage: device-info [serial]
+
+if [ -n "$1" ]; then
+    export ANDROID_SERIAL="$1"
+fi
+
+adb shell svc wifi enable
+adb shell svc bluetooth enable
+
+sleep 5
+
+prop() {
+    adb shell getprop "$1"
+}
+
+echo "[Device Model]:"
+prop ro.product.device
+echo "[Boot HWC]:"
+prop ro.boot.hwc
+echo "[Vendor OEM S/N]:"
+prop ro.vendor.oem.sno
+echo "[RIL OEM S/N]:"
+prop ro.ril.oem.sno
+echo "[Incremental Version]:"
+prop ro.build.version.incremental
+echo "[Golden Copy Flag]:"
+prop persist.radio.goldencopy_flag
+echo "[CPU ID]:"
+prop ro.boot.cpuid
+echo "[IMEI1]:"
+prop ro.ril.oem.imei1
+echo "[IMEI2]:"
+prop ro.ril.oem.imei2
+
+echo "[WiFi MAC Upper]:"
+adb shell "cat /sys/class/net/wlan0/address" | tr -d ':' | tr '[:lower:]' '[:upper:]'
+
+echo "[BT MAC]:"
+adb shell "settings get secure bluetooth_address" | tr -d ':'
