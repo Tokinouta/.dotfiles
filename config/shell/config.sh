@@ -7,7 +7,13 @@ HISTCONTROL=ignoreboth
 if [ "$SHELL_TYPE" = "bash" ]; then
   shopt -s histappend
 elif [ "$SHELL_TYPE" = "zsh" ]; then
+  # zsh defaults HISTFILE to empty and SAVEHIST to 0 — without these,
+  # nothing is ever written to disk.
+  HISTFILE="$HOME/.zsh_history"
+  SAVEHIST=10000
   setopt APPEND_HISTORY
+  # Share history across concurrent sessions (terminal 1 <-> terminal 2).
+  setopt SHARE_HISTORY INC_APPEND_HISTORY
 
   # macOS zsh defaults to vi-mode when $EDITOR contains "vi" (e.g. nvim),
   # breaking Ctrl-A/R/E/K etc. Force emacs keybindings.
