@@ -37,7 +37,7 @@ These tools are initialized on shell startup via the load chain above:
 | zsh-autosuggestions | `post-init.sh` (zsh only) | command suggestions while typing — fish suggests natively, so no fish counterpart |
 | zsh-syntax-highlighting | `post-init.sh` (zsh only) | command syntax highlighting, sourced last per its docs — fish highlights natively |
 | cargo/rustup | `extras/cargo.sh` / `extras/cargo.fish` | Rust toolchain (mirrored via Tsinghua) |
-| brew | `extras/brew.sh` / `extras/brew.fish` | Homebrew (macOS only) |
+| brew | `extras/brew.sh` / `extras/brew.fish` | Homebrew — macOS (`/opt/homebrew`) + Linux (`/home/linuxbrew/.linuxbrew`), git remotes mirrored via CERNET |
 | bun | `extras/bun.sh` / `extras/bun.fish` | JavaScript runtime |
 | conda | `extras/conda.sh` / `extras/conda.fish` | Python environment management — bash/zsh lazy-load the shell hook (~350ms) until first `conda`/`mamba` call |
 | nvm | `extras/nvm.sh` / `extras/nvm.fish` | Node.js version management — bash/zsh lazy-load nvm.sh (~500ms) until first `nvm` call; fish only resolves the default alias onto `PATH` (nvm is a bash function library fish cannot source) |
