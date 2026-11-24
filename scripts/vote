@@ -2,13 +2,14 @@
 """Vote Gerrit labels on the current patch set of each change given.
 
 Usage:
-    vote verified  [options] <change-id-or-url> [<change-id-or-url> ...]
-    vote presubmit [options] <change-id-or-url> [<change-id-or-url> ...]
+    vote verified   [options] <change-id-or-url> [<change-id-or-url> ...]
+    vote codereview [options] <change-id-or-url> [<change-id-or-url> ...]
+    vote presubmit  [options] <change-id-or-url> [<change-id-or-url> ...]
 
-`verified` casts its vote immediately; `presubmit` waits a cadence (default
-300s) between votes. Both resolve and validate every change first, re-resolve
-the current patch set right before each vote (so a freshly uploaded patch set
-is not missed), and abort on the first failure.
+`verified` and `codereview` cast their vote immediately; `presubmit` waits a
+cadence (default 300s) between votes. All resolve and validate every change
+first, re-resolve the current patch set right before each vote (so a freshly
+uploaded patch set is not missed), and abort on the first failure.
 
 Subcommands differ only in data, so the shared pipeline below is driven by the
 COMMANDS registry — a new label is a new CommandSpec entry, no core changes.
@@ -70,6 +71,10 @@ COMMANDS = {
     "verified": CommandSpec(
         help="vote Verified on each change, immediately with no cadence",
         label="Verified",
+    ),
+    "codereview": CommandSpec(
+        help="vote Code-Review on each change, immediately with no cadence",
+        label="Code-Review",
     ),
     "presubmit": CommandSpec(
         help="vote Presubmit-Ready on each change, waiting a cadence between votes",
