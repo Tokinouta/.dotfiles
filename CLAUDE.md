@@ -19,7 +19,7 @@ To add support for a new POSIX shell (e.g. ksh), add its detection in `init.sh` 
 2. `config/shell/env.sh` — env vars, `PATH` (tool inits live in `extras/`; starship/zoxide in `post-init.sh`)
 3. `config/shell/functions.sh` — shell functions (before aliases because zsh expands aliases while parsing function definitions)
 4. `config/shell/aliases.sh` — aliases (mostly modern CLI replacements)
-5. `config/shell/extras/*.sh` — auto-globbed; each file is a self-contained tool init (`conda.sh`, `nvm.sh`)
+5. `config/shell/extras/*.sh` — auto-globbed; each file is a self-contained tool init (`conda.sh`, `brew.sh`)
 6. `config/shell/post-init.sh` — starship/zoxide init, then zsh-only plugins (`zsh-autosuggestions`, `zsh-syntax-highlighting`); runs last per those plugins' docs (on zsh < 5.9 syntax-highlighting wraps all ZLE widgets at source time)
 
 Fish loads a parallel chain: `~/.config/fish/config.fish` sources `config/fish/init.fish`, which — in interactive sessions only — loads `config/fish/env.fish`, `config/fish/aliases.fish`, `config/fish/functions.fish`, `config/fish/extras/*.fish` (auto-globbed, same drop-in pattern), then `config/fish/post-init.fish`. Non-interactive fish only gets `SHELL_TYPE=fish`.
@@ -40,7 +40,7 @@ These tools are initialized on shell startup via the load chain above:
 | brew | `extras/brew.sh` / `extras/brew.fish` | Homebrew — macOS (`/opt/homebrew`) + Linux (`/home/linuxbrew/.linuxbrew`), git remotes mirrored via CERNET |
 | bun | `extras/bun.sh` / `extras/bun.fish` | JavaScript runtime |
 | conda | `extras/conda.sh` / `extras/conda.fish` | Python environment management — bash/zsh lazy-load the shell hook (~350ms) until first `conda`/`mamba` call |
-| nvm | `extras/nvm.sh` / `extras/nvm.fish` | Node.js version management — bash/zsh lazy-load nvm.sh (~500ms) until first `nvm` call; fish only resolves the default alias onto `PATH` (nvm is a bash function library fish cannot source) |
+Node.js comes from Homebrew (`brew install node`) — no version manager. Global npm packages install into `$(brew --prefix)/bin`, which the brew extras put on `PATH`.
 
 `starship.toml` lives in the repo and is wired up via `STARSHIP_CONFIG` (set in `env.sh` / `env.fish`), so a fresh clone needs no `~/.config/starship.toml`. A pre-existing symlink at that path is redundant but harmless.
 
@@ -77,7 +77,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope
 | `docs` | Documentation only |
 | `chore` | Maintenance, dependency bumps, cleanup |
 
-Scopes: `shell`, `config`, `script`, `style`, or the name of the extras file (e.g. `brew`, `nvm`). Omit scope for cross-cutting changes.
+Scopes: `shell`, `config`, `script`, `style`, or the name of the extras file (e.g. `brew`, `conda`). Omit scope for cross-cutting changes.
 
 All messages are lowercase, imperative mood, no trailing period.
 

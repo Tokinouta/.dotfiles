@@ -12,7 +12,7 @@ export SHELL_TYPE="$(basename "$SHELL")"
 [ -f "$DOTFILES/functions.sh" ] && source "$DOTFILES/functions.sh"
 [ -f "$DOTFILES/aliases.sh" ]   && source "$DOTFILES/aliases.sh"
 
-# Load extras (like conda, nvm, etc.)
+# Load extras (like conda, brew, etc.)
 for file in "$DOTFILES/extras/"*.sh; do
   [ -f "$file" ] && source "$file"
 done
